@@ -4,6 +4,5 @@ build/
 uploads/
 *.log
 .DS_Store
-tunnel-url.txt
 start-tunnel.bat
 google-form-fields.json

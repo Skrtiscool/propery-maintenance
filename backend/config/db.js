@@ -5,7 +5,11 @@ let isMemoryMode = false;
 
 async function createDb() {
   try {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const dbUrl = process.env.DATABASE_URL;
+    pool = new Pool({
+      connectionString: dbUrl,
+      ssl: dbUrl && (dbUrl.includes('supabase') || dbUrl.includes('neon')) ? { rejectUnauthorized: false } : false,
+    });
     await pool.query('SELECT 1');
     console.log('Connected to PostgreSQL');
   } catch (err) {

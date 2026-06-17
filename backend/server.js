@@ -41,6 +41,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+const clientBuild = path.join(__dirname, '..', 'frontend', 'build');
+if (fs.existsSync(clientBuild)) {
+  app.use(express.static(clientBuild));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(clientBuild, 'index.html'));
+    }
+  });
+}
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
