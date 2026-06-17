@@ -1,0 +1,9 @@
+node_modules/
+build/
+.env
+uploads/
+*.log
+.DS_Store
+tunnel-url.txt
+start-tunnel.bat
+google-form-fields.json
