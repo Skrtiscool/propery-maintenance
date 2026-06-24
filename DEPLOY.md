@@ -72,7 +72,7 @@ gh repo create property-maintenance --public --source=. --push
 ## Step 3: Verify
 
 - Visit `https://property-maintenance-web.onrender.com`
-- Login with `admin` / `ChangeMeImmediately123!`
+- Login with `admin` / `admin`
 
 ## Step 4: Google Form Integration
 
@@ -91,7 +91,7 @@ Login, go to the user management modal, or use this endpoint:
 curl -X PATCH https://property-maintenance-api.onrender.com/api/auth/password \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"currentPassword":"ChangeMeImmediately123!","newPassword":"YourNewPassword"}'
+  -d '{"currentPassword":"admin","newPassword":"YourNewPassword"}'
 ```
 
 ## Notes

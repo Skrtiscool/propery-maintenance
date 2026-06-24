@@ -3,183 +3,149 @@ import { useAuth } from '../context/AuthContext';
 import api from '../hooks/useApi';
 import toast from 'react-hot-toast';
 
-function getPriorityColor(p) {
-  switch (p) {
-    case 'EMERGENCY': return 'bg-red-100 text-red-700';
-    case 'HIGH': return 'bg-orange-100 text-orange-700';
-    case 'MEDIUM': return 'bg-yellow-100 text-yellow-700';
-    default: return 'bg-blue-100 text-blue-700';
-  }
-}
-
-const STATUS_LABELS = {
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-  ASSIGNED: 'Assigned',
-};
-
-export default function RequestDetailModal({ request, onClose, onUpdated }) {
+export default function RequestDetailModal({ request, onClose, onUpdated, onDelete }) {
   const { user } = useAuth();
-  const [workers, setWorkers] = useState([]);
-  const [assigning, setAssigning] = useState(false);
-  const [partsNotes, setPartsNotes] = useState('');
-  const [showPartsInput, setShowPartsInput] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [assignId, setAssignId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const canManage = user?.role === 'HEAD_ADMIN' || user?.role === 'ADMIN';
+  const canDelete = canManage;
 
   useEffect(() => {
-    if (request.status === 'APPROVED') {
-      api.get('/api/auth/workers').then((r) => setWorkers(r.data)).catch(() => {});
+    if (canManage) {
+      api.get('/api/users').then((r) => setUsers(r.data)).catch(() => {});
     }
-  }, [request.status]);
+  }, [canManage]);
 
-  const handleAction = async (newStatus, notes) => {
+  useEffect(() => {
+    api.get(`/api/requests/${request.id}`)
+      .then((r) => setPhotos(r.data.photos || []))
+      .catch(() => {});
+  }, [request.id]);
+
+  const handleAssign = async () => {
+    if (!assignId) return;
+    setSubmitting(true);
     try {
-      const payload = { status: newStatus };
-      if (notes) payload.notes = notes;
-      const res = await api.patch(`/api/requests/${request.id}/status`, payload);
-      toast.success(STATUS_LABELS[newStatus] || newStatus.replace(/_/g, ' '));
+      const res = await api.patch(`/api/requests/${request.id}/assign`, { assigned_to: assignId });
       onUpdated(res.data);
-      onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update');
+      toast.success('Request assigned');
+    } catch {
+      toast.error('Failed to assign');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleAssign = async (userId) => {
-    setAssigning(true);
+  const handleStatusChange = async (status) => {
+    setSubmitting(true);
     try {
-      const res = await api.patch(`/api/requests/${request.id}/assign`, { assigned_to: userId });
-      toast.success('Assigned to worker');
+      const res = await api.patch(`/api/requests/${request.id}/status`, { status });
       onUpdated(res.data);
-      onClose();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to assign');
+      toast.success('Status updated');
+    } catch {
+      toast.error('Failed to update status');
     } finally {
-      setAssigning(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 p-6">
-        <div className="flex justify-between items-start mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b px-5 py-3 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-800">{request.title}</h2>
+          <div className="flex gap-2">
+            {canDelete && (
+              <button onClick={() => onDelete(request.id)}
+                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 border border-red-300 rounded">
+                Delete
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">&times;</button>
+          </div>
+        </div>
+        <div className="p-5 space-y-4">
           <div>
-            <h2 className="text-lg font-semibold">{request.title}</h2>
-            <span className={`inline-block mt-1 text-xs px-2 py-1 rounded font-medium ${getPriorityColor(request.priority)}`}>
-              {request.priority}
-            </span>
-            <span className="ml-2 text-xs text-gray-500">{request.status.replace(/_/g, ' ')}</span>
+            <span className="text-xs text-gray-500 block">Description</span>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{request.description}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-        </div>
-
-        {request.description && (
-          <div className="mb-4">
-            <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Description</label>
-            <p className="text-sm text-gray-700 mt-1">{request.description}</p>
+          <div className="flex gap-4 text-sm">
+            <div>
+              <span className="text-xs text-gray-500 block">Priority</span>
+              <span className={`text-xs px-2 py-1 rounded font-medium ${request.priority === 'EMERGENCY' ? 'bg-red-100 text-red-700' : request.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : request.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
+                {request.priority}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 block">Status</span>
+              <span className="font-semibold text-gray-700">{request.status?.replace(/_/g, ' ')}</span>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 block">Date</span>
+              <span className="text-gray-600">{new Date(request.created_at).toLocaleDateString()}</span>
+            </div>
           </div>
-        )}
 
-        {request.completion_notes && (
-          <div className="mb-4">
-            <label className="text-xs text-gray-500 uppercase tracking-wide font-medium">Parts / Notes</label>
-            <p className="text-sm text-gray-700 mt-1">{request.completion_notes}</p>
+          <div className="text-sm">
+            <span className="text-xs text-gray-500 block">Location</span>
+            <span>{request.property_name} - Unit {request.unit_number}</span>
           </div>
-        )}
 
-        <div className="text-xs text-gray-500 space-y-1 mb-4">
-          {request.property_name && <p>Property: {request.property_name}</p>}
-          {request.unit_number && <p>Unit: {request.unit_number}</p>}
-          {request.created_by_name && <p>Reported by: {request.created_by_name}</p>}
-          {request.assigned_to_name && <p>Assigned to: {request.assigned_to_name}</p>}
-          <p>Created: {new Date(request.created_at).toLocaleString()}</p>
-        </div>
+          {request.assigned_to_name && (
+            <div className="text-sm">
+              <span className="text-xs text-gray-500 block">Assigned To</span>
+              <span className="text-gray-700">{request.assigned_to_name}</span>
+            </div>
+          )}
 
-        {request.status === 'PENDING' && user?.role !== 'WORKER' && (
-          <div className="flex justify-end space-x-3 pt-3 border-t">
-            <button onClick={() => handleAction('REJECTED')}
-              className="px-4 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50">
-              Reject
-            </button>
-            <button onClick={() => handleAction('APPROVED')}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">
-              Approve
-            </button>
-          </div>
-        )}
+          {photos.length > 0 && (
+            <div>
+              <span className="text-xs text-gray-500 block">Photos</span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {photos.map((p, i) => (
+                  <a key={i} href={p.url} target="_blank" rel="noreferrer">
+                    <img src={p.url} alt={`Photo ${i + 1}`} className="w-20 h-20 object-cover rounded border" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {request.status === 'APPROVED' && user?.role !== 'WORKER' && (
-          <div className="pt-3 border-t">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assign to Worker</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              defaultValue=""
-              onChange={(e) => e.target.value && handleAssign(e.target.value)}
-              disabled={assigning}
-            >
-              <option value="" disabled>{assigning ? 'Assigning...' : 'Select a worker...'}</option>
-              {workers.map((w) => (
-                <option key={w.id} value={w.id}>{w.full_name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {request.status === 'ASSIGNED' && user?.role === 'WORKER' && (
-          <div className="flex justify-end pt-3 border-t">
-            <button onClick={() => handleAction('IN_PROGRESS')}
-              className="px-6 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-              Accept
-            </button>
-          </div>
-        )}
-
-        {request.status === 'IN_PROGRESS' && user?.role === 'WORKER' && (
-          <div className="pt-3 border-t space-y-3">
-            {showPartsInput ? (
-              <div className="space-y-2">
-                <textarea
-                  value={partsNotes}
-                  onChange={(e) => setPartsNotes(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  rows={2}
-                  placeholder="Describe the parts needed..."
-                />
-                <div className="flex justify-end space-x-2">
-                  <button onClick={() => { setShowPartsInput(false); setPartsNotes(''); }}
-                    className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800">
-                    Cancel
-                  </button>
-                  <button onClick={() => handleAction('WAITING_PARTS', partsNotes)}
-                    className="px-4 py-2 text-sm bg-orange-600 text-white rounded hover:bg-orange-700">
-                    Submit
+          {canManage && (
+            <>
+              <div className="border-t pt-4">
+                <label className="text-xs font-medium text-gray-500 block mb-1">Assign To</label>
+                <div className="flex gap-2">
+                  <select value={assignId} onChange={(e) => setAssignId(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    <option value="">Select worker...</option>
+                    {users.filter((u) => u.role === 'WORKER').map((u) => (
+                      <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                    ))}
+                  </select>
+                  <button onClick={handleAssign} disabled={!assignId || submitting}
+                    className="text-sm bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700 disabled:opacity-50">
+                    Assign
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="flex justify-end space-x-3">
-                <button onClick={() => setShowPartsInput(true)}
-                  className="px-4 py-2 text-sm text-orange-600 border border-orange-300 rounded hover:bg-orange-50">
-                  Waiting Parts
-                </button>
-                <button onClick={() => handleAction('COMPLETED')}
-                  className="px-6 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">
-                  Mark Complete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
-        {request.status === 'WAITING_PARTS' && user?.role === 'WORKER' && (
-          <div className="flex justify-end pt-3 border-t">
-            <button onClick={() => handleAction('IN_PROGRESS')}
-              className="px-6 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-              Resume (Back to In Progress)
-            </button>
-          </div>
-        )}
+              <div className="border-t pt-4">
+                <label className="text-xs font-medium text-gray-500 block mb-1">Update Status</label>
+                <div className="flex flex-wrap gap-2">
+                  {['PENDING', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_PARTS', 'COMPLETED', 'CLOSED'].map((s) => (
+                    <button key={s} onClick={() => handleStatusChange(s)} disabled={submitting || s === request.status}
+                      className={`text-xs px-3 py-1.5 rounded border transition-colors ${s === request.status ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-700'}`}>
+                      {s.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

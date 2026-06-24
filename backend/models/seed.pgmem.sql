@@ -1,8 +1,8 @@
 INSERT INTO users (email, password_hash, full_name, role, force_password_change)
 VALUES (
     'admin',
-    '$2a$10$tQplZYGSEQyStbHMLM6Cx.v2ls/FO2g8e0RWvCpIaPf1fWKpwNmdC',
+    '$2a$10$p8eNExkajU/SH9YBon07GOykzU1dDqtRhgPBJe.6T3qupCvoWtG3y',
     'Head Administrator',
     'HEAD_ADMIN',
-    true
+    false
 ) ON CONFLICT (email) DO NOTHING;

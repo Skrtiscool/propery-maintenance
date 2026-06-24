@@ -6,6 +6,7 @@ const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'EMERGENCY'];
 
 export default function CreateRequestModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM' });
+  const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -14,6 +15,15 @@ export default function CreateRequestModal({ onClose, onCreated }) {
     setSubmitting(true);
     try {
       const res = await api.post('/api/requests', form);
+      const created = res.data;
+      if (photo) {
+        const fd = new FormData();
+        fd.append('photo', photo);
+        fd.append('photo_type', 'BEFORE');
+        await api.post(`/api/requests/${created.id}/photos`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
       toast.success('Request created');
       onCreated(res.data);
       onClose();
@@ -63,19 +73,16 @@ export default function CreateRequestModal({ onClose, onCreated }) {
               {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Photo (optional)</label>
+            <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files[0])}
+              className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+          </div>
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
+            <button type="button" onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+            <button type="submit" disabled={submitting}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
               {submitting ? 'Creating...' : 'Create'}
             </button>
           </div>
