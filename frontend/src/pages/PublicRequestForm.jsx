@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
+import api from '../hooks/useApi';
 
 export default function PublicRequestForm() {
   const [form, setForm] = useState({ title: '', description: '', priority: 'MEDIUM' });
@@ -12,7 +12,7 @@ export default function PublicRequestForm() {
     if (!form.title.trim()) return;
     setSubmitting(true);
     try {
-      await axios.post('http://localhost:5000/api/public/requests', form);
+      await api.post('/api/public/requests', form);
       setSubmitted(true);
       toast.success('Request submitted');
     } catch (err) {

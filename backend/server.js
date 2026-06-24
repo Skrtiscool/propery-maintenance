@@ -41,6 +41,51 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ── Users (all) ──
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, email, full_name, role, is_active, created_at
+       FROM users ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── Properties ──
+app.get('/api/properties', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT p.*, u.full_name AS manager_name
+       FROM properties p
+       LEFT JOIN users u ON p.manager_id = u.id
+       ORDER BY p.name ASC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+app.post('/api/properties', async (req, res) => {
+  try {
+    const { name, address, manager_id } = req.body;
+    if (!name || !address) {
+      return res.status(400).json({ message: 'Name and address are required' });
+    }
+    const result = await db.query(
+      `INSERT INTO properties (name, address, manager_id)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [name, address, manager_id || null]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 const clientBuild = path.join(__dirname, '..', 'frontend', 'build');
 if (fs.existsSync(clientBuild)) {
   app.use(express.static(clientBuild));

@@ -44,6 +44,10 @@ exports.getRequests = async (req, res) => {
       query += ` AND mr.assigned_to = $${idx++}`;
       params.push(assigned_to);
     }
+    if (req.user.role === 'TENANT') {
+      query += ` AND mr.created_by = $${idx++}`;
+      params.push(req.user.id);
+    }
 
     query += ' ORDER BY mr.created_at DESC';
 
