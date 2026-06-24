@@ -9,6 +9,9 @@ export default function TenantDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [pwForm, setPwForm] = useState({ current_password: '', new_password: '' });
+  const [pwSubmitting, setPwSubmitting] = useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -21,7 +24,29 @@ export default function TenantDashboard() {
     }
   };
 
+  useEffect(() => {
+    if (user?.force_password_change) {
+      setShowChangePw(true);
+      toast('Please change your password before continuing', { icon: '\u{1F512}' });
+    }
+  }, [user]);
+
   useEffect(() => { fetchRequests(); }, []);
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwSubmitting(true);
+    try {
+      await api.post('/api/auth/change-password', pwForm);
+      toast.success('Password changed successfully');
+      setShowChangePw(false);
+      setPwForm({ current_password: '', new_password: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPwSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,9 +135,16 @@ export default function TenantDashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">My Requests</h2>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading...</p>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => <div key={i} className="animate-pulse bg-gray-200 h-20 rounded" />)}
+            </div>
           ) : requests.length === 0 ? (
-            <p className="text-sm text-gray-500">No requests yet.</p>
+            <div className="text-center py-10 text-gray-400">
+              <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <p className="text-sm">No requests yet. Submit one above!</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {requests.map((req) => (
@@ -132,6 +164,32 @@ export default function TenantDashboard() {
           )}
         </div>
       </main>
+
+      {showChangePw && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-6">
+            <h2 className="text-lg font-semibold mb-4">Change Password</h2>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                <input type="password" required value={pwForm.current_password}
+                  onChange={(e) => setPwForm({ ...pwForm, current_password: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input type="password" required value={pwForm.new_password}
+                  onChange={(e) => setPwForm({ ...pwForm, new_password: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <button type="submit" disabled={pwSubmitting}
+                className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">
+                {pwSubmitting ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

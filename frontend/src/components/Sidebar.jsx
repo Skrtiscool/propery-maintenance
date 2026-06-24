@@ -3,12 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '⊞' },
-  { path: '/users', label: 'Users', icon: '👤' },
-  { path: '/properties', label: 'Properties', icon: '🏠' },
+  { path: '/', label: 'Dashboard', icon: '\u{229E}' },
+  { path: '/users', label: 'Users', icon: '\u{1F464}' },
+  { path: '/properties', label: 'Properties', icon: '\u{1F3E0}' },
+  { path: '/audit', label: 'Audit Log', icon: '\u{1F4CB}' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ pendingCount }) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -21,7 +22,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* hamburger button */}
       <button
         onClick={() => setOpen(true)}
         className="fixed top-3 left-3 z-40 w-9 h-9 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
@@ -29,14 +29,17 @@ export default function Sidebar() {
         <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
+        {pendingCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+            {pendingCount > 9 ? '9+' : pendingCount}
+          </span>
+        )}
       </button>
 
-      {/* overlay */}
       {open && (
         <div className="fixed inset-0 bg-black bg-opacity-30 z-40" onClick={() => setOpen(false)} />
       )}
 
-      {/* sidebar panel */}
       <div className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-xl transform transition-transform duration-200 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between px-4 h-14 border-b border-gray-200">
           <span className="font-semibold text-sm text-gray-800">Property Maintenance</span>
@@ -45,7 +48,7 @@ export default function Sidebar() {
 
         <div className="px-2 py-3 border-b border-gray-100">
           <div className="px-3 py-2 text-xs text-gray-500">
-            {user?.full_name} <span className="text-gray-400">·</span> {user?.role?.replace('_', ' ')}
+            {user?.full_name} <span className="text-gray-400">&middot;</span> {user?.role?.replace('_', ' ')}
           </div>
         </div>
 
@@ -54,7 +57,7 @@ export default function Sidebar() {
             <button
               key={item.path}
               onClick={() => handleNav(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
                 location.pathname === item.path
                   ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -62,6 +65,11 @@ export default function Sidebar() {
             >
               <span className="text-base">{item.icon}</span>
               {item.label}
+              {item.path === '/' && pendingCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>

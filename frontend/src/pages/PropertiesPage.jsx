@@ -11,6 +11,7 @@ export default function PropertiesPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', address: '', manager_id: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
 
   const fetchData = async () => {
     try {
@@ -49,19 +50,28 @@ export default function PropertiesPage() {
 
   const canManage = user?.role === 'HEAD_ADMIN' || user?.role === 'ADMIN';
 
+  const filteredProperties = properties.filter(
+    (p) => !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.address?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="p-6 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
           <p className="text-sm text-gray-500 mt-1">{properties.length} propert{properties.length !== 1 ? 'ies' : 'y'}</p>
         </div>
-        {canManage && (
-          <button onClick={() => setShowForm(true)}
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            + Add Property
-          </button>
-        )}
+        <div className="flex gap-3 items-center">
+          <input type="text" placeholder="Search properties..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-48" />
+          {canManage && (
+            <button onClick={() => setShowForm(true)}
+              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+              + Add Property
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (
@@ -105,10 +115,12 @@ export default function PropertiesPage() {
       )}
 
       {loading ? (
-        <div className="text-center text-gray-500 py-12">Loading...</div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => <div key={i} className="animate-pulse bg-gray-200 h-20 rounded-xl" />)}
+        </div>
       ) : (
         <div className="grid gap-4">
-          {properties.map((p) => (
+          {filteredProperties.map((p) => (
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start">
                 <div>
@@ -123,7 +135,7 @@ export default function PropertiesPage() {
               </div>
             </div>
           ))}
-          {properties.length === 0 && <p className="text-center text-gray-400 py-12">No properties yet</p>}
+          {filteredProperties.length === 0 && <p className="text-center text-gray-400 py-12">No properties found</p>}
         </div>
       )}
     </div>

@@ -69,6 +69,22 @@ app.get('/api/properties', async (req, res) => {
   }
 });
 
+// ── Audit Logs ──
+app.get('/api/audit', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT a.*, u.full_name AS user_name
+       FROM audit_logs a
+       LEFT JOIN users u ON a.user_id = u.id
+       ORDER BY a.created_at DESC
+       LIMIT 200`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.post('/api/properties', async (req, res) => {
   try {
     const { name, address, manager_id } = req.body;

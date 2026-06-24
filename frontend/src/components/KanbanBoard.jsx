@@ -26,6 +26,17 @@ function getStatusColor(s) {
   }
 }
 
+function EmptyColumn() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+      <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+      <p className="text-xs">No tasks</p>
+    </div>
+  );
+}
+
 export default function KanbanBoard({ tasks, onMoveTask, onCardClick, userRole }) {
   const STATUSES = userRole === 'WORKER' ? WORKER_STATUSES : ALL_STATUSES;
   const columns = STATUSES.reduce((acc, status) => {
@@ -57,6 +68,7 @@ export default function KanbanBoard({ tasks, onMoveTask, onCardClick, userRole }
                   {...provided.droppableProps}
                   className="space-y-3 min-h-[200px]"
                 >
+                  {(columns[status] || []).length === 0 && !provided.isDraggingOver && <EmptyColumn />}
                   {(columns[status] || []).map((task, index) => (
                     <Draggable key={task.id} draggableId={task.id} index={index}>
                       {(provided) => (
@@ -76,15 +88,25 @@ export default function KanbanBoard({ tasks, onMoveTask, onCardClick, userRole }
                           <p className="text-xs text-gray-500 mt-1">
                             {task.property_name} - Unit {task.unit_number}
                           </p>
+                          {task.created_by_name && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              by {task.created_by_name}
+                            </p>
+                          )}
                           {task.assigned_to_name && (
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-xs text-gray-400 mt-0.5">
                               Assigned to: {task.assigned_to_name}
                             </p>
                           )}
                           <div className="mt-3 flex justify-between items-center">
-                            <span className="text-[10px] text-gray-400">
+                            <span className="text-[10px] text-gray-400" title={`Created: ${new Date(task.created_at).toLocaleString()}`}>
                               {new Date(task.created_at).toLocaleDateString()}
                             </span>
+                            {task.updated_at !== task.created_at && (
+                              <span className="text-[10px] text-gray-300" title={`Updated: ${new Date(task.updated_at).toLocaleString()}`}>
+                                updated
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}

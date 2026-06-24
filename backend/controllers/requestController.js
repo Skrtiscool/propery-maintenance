@@ -95,6 +95,13 @@ exports.getRequest = async (req, res) => {
 exports.createRequest = async (req, res) => {
   const { title, description, priority, unit_id } = req.body;
 
+  if (!title || title.trim().length < 3) {
+    return res.status(400).json({ message: 'Title must be at least 3 characters' });
+  }
+  if (priority && !['LOW', 'MEDIUM', 'HIGH', 'EMERGENCY'].includes(priority)) {
+    return res.status(400).json({ message: 'Invalid priority value' });
+  }
+
   try {
     const result = await db.query(
       `INSERT INTO maintenance_requests (title, description, priority, unit_id, created_by, status)
@@ -189,6 +196,27 @@ exports.assignRequest = async (req, res) => {
     );
 
     res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.deleteRequest = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('DELETE FROM maintenance_requests WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Request not found' });
+    }
+    await db.query(
+      'INSERT INTO audit_logs (user_id, action, details) VALUES ($1, $2, $3)',
+      [req.user.id, 'REQUEST_DELETED', JSON.stringify({ request_id: id })]
+    );
+    if (req.io) {
+      req.io.emit('request-deleted', id);
+    }
+    res.json({ message: 'Request deleted' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
